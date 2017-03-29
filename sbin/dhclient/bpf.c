@@ -94,19 +94,30 @@ if_register_bpf(struct interface_info *info, int flags)
  * 'ip and udp and src port bootps and dst port (bootps or bootpc)'
  */
 struct bpf_insn dhcp_bpf_wfilter[] = {
+	/* Set packet index for IP packet... */
+	BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, 0),
+
+	/* Test whether this is a VLAN packet... */
+	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 12),
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_VLAN, 0, 1),
+
+	/* Correct the packet index for VLAN... */
+	BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, 4),
+
+	/* Make sure it is an IPv4 packet... */
 	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 14),
 	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, (IPVERSION << 4) + 5, 0, 12),
 
 	/* Make sure this is an IP packet... */
-	BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 12),
+	BPF_STMT(BPF_LD + BPF_H + BPF_IND, 12),
 	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 0, 10),
 
 	/* Make sure it's a UDP packet... */
-	BPF_STMT(BPF_LD + BPF_B + BPF_ABS, 23),
+	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 23),
 	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, IPPROTO_UDP, 0, 8),
 
 	/* Make sure this isn't a fragment... */
-	BPF_STMT(BPF_LD + BPF_H + BPF_ABS, 20),
+	BPF_STMT(BPF_LD + BPF_H + BPF_IND, 20),
 	BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 6, 0),	/* patched */
 
 	/* Get the IP header length... */
