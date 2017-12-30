@@ -175,6 +175,12 @@ if_register_send(struct interface_info *info)
 	p.bf_len = dhcp_bpf_wfilter_len;
 	p.bf_insns = dhcp_bpf_wfilter;
 
+	if (dhcp_bpf_wfilter[7].k == 0x1fff)
+		dhcp_bpf_wfilter[7].k = htons(IP_MF|IP_OFFMASK);
+
+	if (ioctl(info->wfdesc, BIOCSETWF, &p) < 0)
+		error("Can't install write filter program: %m");
+
 	if (ioctl(info->wfdesc, BIOCLOCK, NULL) < 0)
 		error("Cannot lock bpf");
 
