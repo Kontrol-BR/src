@@ -98,7 +98,7 @@ assemble_hw_header(struct interface_info *interface, unsigned char *buf,
 	struct ether_vlan_header eh;
 
 	memset(eh.evl_dhost, 0xff, sizeof(eh.evl_dhost));
-	if (interface->hw_address.hlen == sizeof(eh.ether_shost))
+	if (interface->hw_address.hlen == sizeof(eh.evl_shost))
 		memcpy(eh.evl_shost, interface->hw_address.haddr,
 		    sizeof(eh.evl_shost));
 	else
