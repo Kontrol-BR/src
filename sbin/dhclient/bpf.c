@@ -99,7 +99,7 @@ struct bpf_insn dhcp_bpf_wfilter[] = {
 
 	/* Test whether this is a VLAN packet... */
 	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 12),
-	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_VLAN, 0, 2),
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_VLAN, 0, 1),
 
 	/* Correct the packet index for VLAN... */
 	BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, 4),
