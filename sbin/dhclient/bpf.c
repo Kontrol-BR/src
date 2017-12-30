@@ -94,24 +94,23 @@ if_register_bpf(struct interface_info *info, int flags)
  * 'ip and udp and src port bootps and dst port (bootps or bootpc)'
  */
 struct bpf_insn dhcp_bpf_wfilter[] = {
-	/*
-	 * BROKEN/WIP: must also check (and pass) if packet has 802.1q encapsulation
-	 */
-	BPF_STMT(BPF_RET+BPF_K, (u_int)-1),
+	/* Set packet index for IP packet... */
+	BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, 0),
 
-	/* Set indexing offset to 0 */
-	BPF_STMT(BPF_LDX + BPF_B + BPF_IMM, 0),
+	/* Test whether this is a VLAN packet... */
+	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 12),
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_VLAN, 0, 2),
 
-	/* Load Ethernet type */
+	/* Correct the packet index for VLAN... */
+	BPF_STMT(BPF_LDX + BPF_W + BPF_IMM, 4),
+
+	/* Make sure it is an IPv4 packet... */
+	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 14),
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, (IPVERSION << 4) + 5, 0, 12),
+
+	/* Make sure this is an IP packet... */
 	BPF_STMT(BPF_LD + BPF_H + BPF_IND, 12),
-
-	/* Check if it is an IP packet */
-	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 2, 0),
-
-	/* If not, check if it is a 802.1q packet */
-	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_VLAN, 0, 10),
-	/* If it is, change offset for further tests */
-	BPF_STMT(BPF_LDX + BPF_B + BPF_IMM, 4),
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, ETHERTYPE_IP, 0, 10),
 
 	/* Make sure it's a UDP packet... */
 	BPF_STMT(BPF_LD + BPF_B + BPF_IND, 23),
@@ -121,19 +120,8 @@ struct bpf_insn dhcp_bpf_wfilter[] = {
 	BPF_STMT(BPF_LD + BPF_H + BPF_IND, 20),
 	BPF_JUMP(BPF_JMP + BPF_JSET + BPF_K, 0x1fff, 6, 0),	/* patched */
 
-	/*
-	 * IP checks
-	 */
-	/* Move index to accumulator */
-	BPF_STMT(BPF_MISC + BPF_TXA, 0),
-
 	/* Get the IP header length... */
 	BPF_STMT(BPF_LDX + BPF_B + BPF_MSH, 14),
-
-	/* Add it to the base offset */
-	BPF_STMT(BPF_ALU + BPF_ADD + BPF_X, 0),
-	/* Store it in X */
-	BPF_STMT(BPF_MISC + BPF_TAX, 0),
 
 	/* Make sure it's from the right port... */
 	BPF_STMT(BPF_LD + BPF_H + BPF_IND, 14),
